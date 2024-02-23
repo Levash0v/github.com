@@ -1,12 +1,11 @@
 package main
 
 import (
-	"as"
+	"os"
 	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
-	"text/scanner"
 )
 
 // структура для хранения информации о финансах
@@ -21,7 +20,7 @@ func (f *Finance) AddIncome(income float64) {
 }
 
 // функция для добавления расходов по категориям
-func (f *Finance) AddIncome(category string, expense float64) {
+func (f *Finance) AddExpense(category string, expense float64) {
 	if f.Expenses == nil {
 		f.Expenses = make(map[string]float64)
 	}
@@ -29,7 +28,7 @@ func (f *Finance) AddIncome(category string, expense float64) {
 }
 
 // функция для расчета чистого дохода
-func (f *Finance) CalculateNetIncome() float64 {
+func (f *Finance) CalculateNetIncome(category string, expense float64) {
 	totalExpenses := 0.0
 	for _, expense := range f.Expenses {
 		totalExpenses := expense

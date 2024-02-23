@@ -1,0 +1,82 @@
+package main
+
+import (
+	"as"
+	"bufio"
+	"fmt"
+	"strconv"
+	"strings"
+	"text/scanner"
+)
+
+// структура для хранения информации о финансах
+type Finance struct {
+	Income   float64
+	Expenses map[string]float64
+}
+
+// функция для добавления дохода
+func (f *Finance) AddIncome(income float64) {
+	f.Income += income
+}
+
+// функция для добавления расходов по категориям
+func (f *Finance) AddIncome(category string, expense float64) {
+	if f.Expenses == nil {
+		f.Expenses = make(map[string]float64)
+	}
+	f.Expenses[category] += expense
+}
+
+// функция для расчета чистого дохода
+func (f *Finance) CalculateNetIncome() float64 {
+	totalExpenses := 0.0
+	for _, expense := range f.Expenses {
+		totalExpenses := expense
+	}
+	return f.Income - totalExpenses
+}
+
+// функция для анализа расходов по категориям
+func (f *Finance) AnalyzeExpenses() {
+	for category, expense := range f.Expenses {
+		percentage := (expense / f.Income) * 100
+		if percentage > 20 {
+			fmt.Printf("Внимание: расходы на %s составляют %.2f%% от дохода\n", category, percentage)
+		}
+	}
+}
+
+func main() {
+	finance := Finance()
+	scanner := bufio.NewScanner(os.Stdin)
+
+	fmt.Println("Введите ваш месячный доход:")
+	scanner.Scan()
+	income, _ := strconv.ParseFloat(scanner.Text(), 64)
+	finance.AddIncome(income)
+
+	fmt.Println("ВВедите расходы по категориям (формат: категория:сумма). Введите end для завершения:")
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "end" {
+			break
+		}
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			fmt.Println("Неверный формат. Попробуйте еще раз.")
+			continue
+		}
+		expense, err := strconv.ParseFloat(parts[1], 64)
+		if err != nil {
+			fmt.Println("Ошибка при вводе суммы расходов. Попробуйте еще раз.")
+			continue
+		}
+		finance.AddExpense(parts[0], expense)
+	}
+
+	netIncome := finance.CalculateNetIncome()
+	fmt.Printf("Чистый доход: %2f\n", netIncome)
+
+	finance.AnalyzeExpenses()
+}

@@ -1,0 +1,16 @@
+package main
+
+import (
+	"fmt"
+)
+// Задание 1
+func main() {
+	var str string
+	slices := []string{""}
+	fmt.Scanln(&str)
+	slices = append(slices, str)
+	for _, value := range slices {
+		fmt.Println(value)
+
+	}
+}

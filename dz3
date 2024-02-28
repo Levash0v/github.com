@@ -1,9 +1,9 @@
+// Задание 1
 package main
 
 import (
 	"fmt"
 )
-// Задание 1
 func main() {
 	var str string
 	slices := []string{""}
@@ -15,4 +15,18 @@ func main() {
 	}
 }
 
+// Задание 3
+package main
 
+import "fmt"
+
+func main() {
+	dict := map[string]string{
+		"apple": "яблоко",
+		"car":   "авто",
+		"world": "мир",
+	}
+	for key, value := range dict {
+		fmt.Printf("Key: %s, Value: %s\n", key, value)
+	}
+}

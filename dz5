@@ -1,0 +1,36 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
+
+type Item struct {
+	ID    string `json:"id"`
+	Amount   string `json:"amount"`
+	Curr string `json:"curr"`
+	Cat   string `json:"cat"`
+	Data  string `json:"data"`
+	Descrip string `json:"descrip"`
+}
+
+type CreateResponse struct {
+	Item Item `json:"item"`
+	Ok   bool `json:"ok"`
+}
+
+func CreateItem(w http.ResponseWriter, r *http.Request) {
+	var item Item
+	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	json.NewEncoder(w).Encode(CreateResponse{Item: item, Ok: true})
+}
+
+func main() {
+	http.HandleFunc("/item", CreateItem)
+	log.Println("Server start on: 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}

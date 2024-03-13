@@ -1,0 +1,52 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+
+	_ "github.com/lib/pq"
+)
+
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "user"
+	password = "password"
+	dbname   = "testdb"
+)
+
+func main() {
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err := sql.Open("postgres", connStr)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	// Создаём таблицу user
+	createTableQuery := `CREATE TABLE IF NOT EXISTS user
+	(id SERIAL PRIMARY KEY, id integer NOT NULL, name VARCHAR(50) NOT NULL, 
+	email VARCHAR(50) NOT NULL, password VARCHAR(50) NOT NULL);
+	CREATE TABLE IF NOT EXISTS transaction
+	(id SERIAL PRIMARY KEY, id integer NOT NULL REFERENCES user(id), value integer NOT NULL, 
+	curr VARCHAR(50) NOT NULL, type VARCHAR(50) NOT NULL, cat VARCHAR(50) NOT NULL, 
+	date DATARANGE NOT NULL, descrip VARCHAR(100) NOT NULL)`
+	_, err = db.Exec(createTableQuery)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Table 'user' created successfully!")
+
+	result, err := db.Exec("INSERT INTO user (name, email, password) VALUES ($1, $2, $3)", 
+	"john_doe", "john@example.com", "password")
+	if err != nil {
+		log.Fatal(err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Inserted %d rows into the 'user' table.\n", rowsAffected)
+}

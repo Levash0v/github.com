@@ -1,21 +1,29 @@
 package configs
 
 import (
+	"f_dz/logs"
+
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Logger struct {
-		LogFile string `mapstructure:"logFile"`
-	} `mapstructure:"logger"`
-	Database struct {
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
-		DBName   string `mapstructure:"dbname"`
-		SSLMode  string `mapstructure:"sslmode"`
-	} `mapstructure:"database"`
+	DataBase Database `yaml:"database"`
+	Restapi  Restapi  `yaml:"restapi"`
+}
+
+type Database struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"sslmode"`
+}
+
+type Restapi struct {
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
+	Sslmode string `yaml:"sslmode"`
 }
 
 func LoadConfig(configFilePath string) (*Config, error) {
@@ -29,6 +37,8 @@ func LoadConfig(configFilePath string) (*Config, error) {
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, err
 	}
+	settings := viper.AllSettings()
+	logs.LogConfigsParams("config", settings)
 
 	return &config, nil
 }

@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"f_dz/db"
 	"f_dz/models"
 	"fmt"
 	"log"
@@ -21,11 +20,15 @@ const (
 	statusError   = "Error"
 )
 
-// HandleTransactions роутер для обработки запросов к транзакциям
 func HandleTransactions(w http.ResponseWriter, r *http.Request) {
+
 	switch r.Method {
 	case "GET":
-		getTransactions(w, r)
+		if currency := r.URL.Query().Get("currency"); currency != "" {
+			getTransactionsWithCurrency(w, r)
+		} else {
+			getTransactions(w, r)
+		}
 	case "POST":
 		addTransaction(w, r)
 	case "PUT":
@@ -38,7 +41,7 @@ func HandleTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// addTransaction добавляет новую транзакцию в базу данных
+// добавляет новую транзакцию в базу данных
 func addTransaction(w http.ResponseWriter, r *http.Request) {
 	var t models.Transactions
 	err := json.NewDecoder(r.Body).Decode(&t)
@@ -49,37 +52,40 @@ func addTransaction(w http.ResponseWriter, r *http.Request) {
 	CalculateCommission(&t)
 	t.TransactionDate = time.Now()
 
-	result := db.DB.Create(&t)
+	result := dbs.DB.Create(&t)
 	if result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		logs.ErrorHandler(w, r, http.StatusOK, "Transaction failed")
 		return
+	} else {
+		logs.SuccessHandler(w, r, http.StatusOK, "Transaction success")
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(t)
 }
 
-// getTransactions возвращает список всех транзакций из базы данных
+// возвращает список всех транзакций пользователя из базы данных
 func getTransactions(w http.ResponseWriter, r *http.Request) {
 	var transactions []models.Transactions
 	userid, _ := ParseTokenFromRequest(r)
-	//fmt.Println("userid: ", userid)
 	if userid == "" {
 		http.Error(w, "user_id is required", http.StatusBadRequest)
 		return
 	}
-	result := db.DB.Where("user_id = ?", userid).Find(&transactions)
-	//result := db.DB.Find(&transactions)
+	result := dbs.DB.Where("user_id = ?", userid).Find(&transactions)
 	if result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		logs.ErrorHandler(w, r, http.StatusOK, "Transaction response failed")
 		return
+	} else {
+		logs.SuccessHandler(w, r, http.StatusOK, "Transaction response success")
 	}
-
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(transactions)
 }
 
-// updateTransaction обновляет данные транзакции в базе данных
+// обновляет данные транзакции в базе данных
 func updateTransaction(w http.ResponseWriter, r *http.Request) {
 	var t models.Transactions
 	vars := mux.Vars(r)
@@ -87,10 +93,12 @@ func updateTransaction(w http.ResponseWriter, r *http.Request) {
 	userid, _ := ParseTokenFromRequest(r)
 	if userid == "" {
 		http.Error(w, "user_id is required", http.StatusBadRequest)
+		logs.ErrorHandler(w, r, http.StatusOK, "Transaction user_id is required")
 		return
 	}
-	if err := db.DB.Where("user_id = ? AND id = ?", userid, id).First(&t).Error; err != nil {
-		http.Error(w, "Transactions user_id not found", http.StatusBadRequest)
+	if err := dbs.DB.Where("user_id = ? AND id = ?", userid, id).First(&t).Error; err != nil {
+		http.Error(w, "Transaction user_id not found", http.StatusBadRequest)
+		logs.ErrorHandler(w, r, http.StatusOK, "Transaction user_id user_id not found")
 		return
 	}
 
@@ -103,7 +111,7 @@ func updateTransaction(w http.ResponseWriter, r *http.Request) {
 	t.ID = uint(id)
 	CalculateCommission(&t)
 	t.TransactionDate = time.Now()
-	result := db.DB.Save(&t)
+	result := dbs.DB.Save(&t)
 	if result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
 		return
@@ -113,19 +121,19 @@ func updateTransaction(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(t)
 }
 
-// deleteTransaction удаляет транзакцию из базы данных
+// удаляет транзакцию из базы данных
 func deleteTransaction(w http.ResponseWriter, r *http.Request) {
 	transactionDeleted := "Transaction deleted"
 	vars := mux.Vars(r)
 	id, _ := strconv.Atoi(vars["id"])
 	userid, _ := ParseTokenFromRequest(r)
-	//fmt.Println("userid: ", userid)
 	if userid == "" {
 		http.Error(w, "user_id is required", http.StatusBadRequest)
+		logs.ErrorHandler(w, r, http.StatusOK, "user_id user_id is required")
 		return
 	}
 
-	result := db.DB.Where("user_id = ?", userid).Delete(&models.Transactions{}, id)
+	result := dbs.DB.Where("user_id = ?", userid).Delete(&models.Transactions{}, id)
 
 	if result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
@@ -134,6 +142,7 @@ func deleteTransaction(w http.ResponseWriter, r *http.Request) {
 		// No rows were deleted, which might be unexpected
 		log.Printf("No records found to delete for user_id: %v with id: %v", userid, id)
 		transactionDeleted = "No User's records found to delete"
+		logs.ErrorHandler(w, r, http.StatusOK, "user_id user_id is required")
 	} else {
 		log.Printf("Successfully deleted record.")
 	}
@@ -159,6 +168,7 @@ func ParseTokenFromRequest(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return "", errors.New("authorization header is required")
+
 	}
 
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -172,9 +182,51 @@ func ParseTokenFromRequest(r *http.Request) (string, error) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		userID := fmt.Sprintf("%.0f", claims["user_id"].(float64))
-		//fmt.Printf("claims: %s\n", claims)
 		return userID, nil
 	} else {
 		return "", err
 	}
+}
+
+func getTransactionsWithCurrency(w http.ResponseWriter, r *http.Request) {
+	var transaction models.Transactions
+	var transactionConv models.ConvertedTransaction
+	vars := mux.Vars(r)
+	userid, _ := ParseTokenFromRequest(r)
+	requestedCurrency := r.URL.Query().Get("currency")
+
+	id, _ := strconv.Atoi(vars["id"])
+	if id == 0 {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+	if userid == "" {
+		http.Error(w, "user_id is required", http.StatusBadRequest)
+		return
+	}
+
+	result := dbs.DB.Where("user_id = ? AND id = ?", userid, id).First(&transaction)
+	if result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		logs.ErrorHandler(w, r, http.StatusOK, "Find failed")
+		return
+	}
+	currencies.Init("fca_live_LE2TEIMIQXseeCco3mE8YhJU9dfcHmlwzdFI")
+
+	converters := make(map[string]string)
+	converters["base_currency"] = transaction.Currency
+	converters["currencies"] = requestedCurrency
+
+	if rates, _ := currencies.LatestData(converters); rates != nil {
+		rate := rates.Data[requestedCurrency]
+		transactionConv.Amount = transaction.Amount * rate
+		transactionConv.Transactions = transaction
+		transactionConv.Currency = requestedCurrency
+	} else {
+		http.Error(w, "Currency not supported", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(transactionConv)
 }

@@ -23,7 +23,7 @@ func Run() {
 	r.HandleFunc("/commissions/calculate", handlers.CalculateCommission)
 	r.HandleFunc("/transactions", handlers.HandleTransactions)
 	r.HandleFunc("/transactions", handlers.Authenticate(handlers.HandleTransactions)).Methods("GET", "POST")
-	r.HandleFunc("/transactions/{id}", handlers.HandleTransactions) // Для PUT и DELETE
+	r.HandleFunc("/transactions/{id}", handlers.HandleTransactions)
 	r.HandleFunc("/users", handlers.RegisterUser).Methods("POST")
 	r.HandleFunc("/users/login", handlers.LoginUser).Methods("POST")
 
@@ -33,9 +33,9 @@ func Run() {
 	fmt.Println("Press Ctrl+C to quit.")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
-	var log = logrus.New()
-	// Настройка формата логов
-	log.Formatter = &logrus.JSONFormatter{}
-	// Установка минимального уровня логирования
-	log.Level = logrus.InfoLevel
+	// var log = logrus.New()
+	// // Настройка формата логов
+	// log.Formatter = &logrus.JSONFormatter{}
+	// // Установка минимального уровня логирования
+	// log.Level = logrus.InfoLevel
 }
